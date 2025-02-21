@@ -1,16 +1,54 @@
-# This is a sample Python script.
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+import torchaudio
+import sys
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+import matplotlib.pyplot as plt
+import IPython.display as ipd
+
+from tqdm import tqdm
+
+import matplotlib# Use TkAgg backend (works for most local setups)
+
+from torchaudio.datasets import SPEECHCOMMANDS
+import os
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+class SubsetSC(SPEECHCOMMANDS):
+    def __init__(self, subset: str = None):
+        super().__init__("./", download=True)
+
+        def load_list(filename):
+            filepath = os.path.join(self._path, filename)
+            with open(filepath) as fileobj:
+                return [os.path.normpath(os.path.join(self._path, line.strip())) for line in fileobj]
+
+        if subset == "validation":
+            self._walker = load_list("validation_list.txt")
+        elif subset == "testing":
+            self._walker = load_list("testing_list.txt")
+        elif subset == "training":
+            excludes = load_list("validation_list.txt") + load_list("testing_list.txt")
+            excludes = set(excludes)
+            self._walker = [w for w in self._walker if w not in excludes]
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+# Create training and testing split of the data. We do not use validation in this tutorial.
+train_set = SubsetSC("training")
+test_set = SubsetSC("testing")
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+waveform, sample_rate, label, speaker_id, utterance_number = train_set[0]
+
+'''
+plt.plot(waveform.t().numpy())  # Generate the plot
+plt.savefig("waveform.png")  # Save the plot as an image file
+print("Plot saved as waveform.png")
+'''
+
+new_sample_rate = 8000
+transform = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=new_sample_rate)
+transformed = transform(waveform)
+
+#ipd.Audio(transformed.numpy(), rate=new_sample_rate)
