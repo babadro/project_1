@@ -2,4 +2,4 @@
 *.idea
 *.mp3
 *.wav
-*/data/*
+data/*
